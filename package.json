@@ -1,0 +1,21 @@
+{
+  "name": "auth0-livepeer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Node deploy scripts for Livepeer Auth0 tenant config (not importable as a library)",
+  "type": "module",
+  "exports": {},
+  "scripts": {
+    "deploy": "tsx scripts/deploy.ts",
+    "export": "tsx scripts/export.ts"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "auth0": "^4.21.0",
+    "auth0-deploy-cli": "^8.11.0",
+    "dotenv": "^17.4.2",
+    "tsx": "^4.19.0"
+  }
+}

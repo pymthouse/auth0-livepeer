@@ -12,6 +12,12 @@ override.tf.json
 terraform.rc
 
 # Never commit secrets
+.env*
+!.env.example
 terraform.tfvars
 *.auto.tfvars
+
+node_modules/
+export/
+
 *.plan

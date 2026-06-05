@@ -1,0 +1,44 @@
+# Livepeer platform Auth0 tenant slice (Auth0 Deploy CLI).
+# Keyword placeholders: ##APP_NAME##, ##API_AUDIENCE##
+
+resourceServers:
+  - name: "##APP_NAME## Livepeer API"
+    identifier: "##API_AUDIENCE##"
+    signing_alg: RS256
+    token_lifetime: 86400
+    token_lifetime_for_web: 7200
+    skip_consent_for_verifiable_first_party_clients: true
+    scopes:
+      - value: sign:job
+        description: Sign payment tickets for Livepeer remote signer
+
+clients:
+  - name: "##APP_NAME## Public"
+    description: Public client for SDK, CLI, and device authorization flow (RFC 8628)
+    app_type: native
+    oidc_conformant: true
+    is_first_party: true
+    grant_types:
+      - urn:ietf:params:oauth:grant-type:device_code
+      - refresh_token
+    token_endpoint_auth_method: none
+    jwt_configuration:
+      alg: RS256
+
+  - name: "##APP_NAME## M2M"
+    description: Confidential client for server-side Builder API and admin operations
+    app_type: non_interactive
+    oidc_conformant: true
+    grant_types:
+      - client_credentials
+    token_endpoint_auth_method: client_secret_post
+
+clientGrants:
+  - client_id: "##APP_NAME## Public"
+    audience: "##API_AUDIENCE##"
+    scope:
+      - sign:job
+  - client_id: "##APP_NAME## M2M"
+    audience: "##API_AUDIENCE##"
+    scope:
+      - sign:job
