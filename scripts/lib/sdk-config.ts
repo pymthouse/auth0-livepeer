@@ -1,4 +1,9 @@
 import type { BootstrapConfig } from "./config.js";
+import {
+  DEFAULT_KONNECT_METERING_URL,
+  isKonnectMeteringUrl,
+  normalizeKonnectMeteringUrl,
+} from "./konnect-metering.js";
 import type { Auth0ProvisionResult } from "./provision.js";
 
 export type LivepeerSdkConfig = {
@@ -45,7 +50,13 @@ export function buildSdkConfig(
 
   if (!config.skipOpenMeter) {
     sdkConfig.openmeter = {
-      url: config.openmeterUrl.replace(/\/$/, ""),
+      url: isKonnectMeteringUrl(config.openmeterUrl, config.openmeterApiKey)
+        ? normalizeKonnectMeteringUrl(
+            /konghq\.com/i.test(config.openmeterUrl)
+              ? config.openmeterUrl
+              : DEFAULT_KONNECT_METERING_URL,
+          )
+        : config.openmeterUrl.replace(/\/$/, ""),
       trialFeatureKey: config.trialFeatureKey,
     };
   }

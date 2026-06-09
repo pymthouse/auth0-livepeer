@@ -1,4 +1,9 @@
 import { randomBytes } from "node:crypto";
+import {
+  DEFAULT_KONNECT_METERING_URL,
+  isKonnectMeteringUrl,
+  normalizeKonnectMeteringUrl,
+} from "./konnect-metering.js";
 import { defaultTenantYamlPath } from "./provision.js";
 
 export type Auth0ProvisionMode = "deploy" | "management";
@@ -55,12 +60,19 @@ export function parseConfig(argv: string[]): BootstrapConfig {
   const appName = argValue(argv, "--app-name") ?? env("APP_NAME") ?? "Livepeer Platform";
   const apiAudience =
     argValue(argv, "--api-audience") ?? env("AUTH0_AUDIENCE") ?? "livepeer";
-  const openmeterUrl =
-    argValue(argv, "--openmeter-url") ??
-    env("OPENMETER_URL") ??
-    "https://openmeter.cloud";
   const openmeterApiKey =
     argValue(argv, "--openmeter-api-key") ?? env("OPENMETER_API_KEY");
+  const openmeterUrlRaw =
+    argValue(argv, "--openmeter-url") ??
+    env("OPENMETER_URL") ??
+    DEFAULT_KONNECT_METERING_URL;
+  const openmeterUrl = isKonnectMeteringUrl(openmeterUrlRaw, openmeterApiKey)
+    ? normalizeKonnectMeteringUrl(
+        /konghq\.com/i.test(openmeterUrlRaw)
+          ? openmeterUrlRaw
+          : DEFAULT_KONNECT_METERING_URL,
+      )
+    : openmeterUrlRaw.replace(/\/$/, "");
   const trialFeatureKey =
     argValue(argv, "--trial-feature-key") ??
     env("OPENMETER_TRIAL_FEATURE_KEY") ??
@@ -120,6 +132,12 @@ export function parseConfig(argv: string[]): BootstrapConfig {
     throw new Error("Missing --openmeter-url or OPENMETER_URL");
   }
 
+  if (!skipOpenMeter && !openmeterApiKey) {
+    throw new Error(
+      "Missing OPENMETER_API_KEY — Konnect PAT (kpat_…) for Kong, or OpenMeter token (om_…) for openmeter.cloud",
+    );
+  }
+
   return {
     auth0Domain,
     auth0MgmtClientId,
@@ -155,8 +173,8 @@ Options:
   --auth0-tenant-yaml <path>        tenant.yaml for deploy mode (default: ./tenant.yaml)
   --app-name <name>                 Application display name prefix
   --api-audience <aud>              API identifier (default: livepeer)
-  --openmeter-url <url>             OpenMeter base URL (cloud or self-hosted)
-  --openmeter-api-key <key>         OpenMeter API key (required for cloud)
+  --openmeter-url <url>             Konnect metering base (default: us.api.konghq.com/v3/openmeter)
+  --openmeter-api-key <key>         Konnect PAT (kpat_…) or OpenMeter token (om_…)
   --trial-feature-key <key>         Entitlement feature key (default: network_spend)
   --webhook-secret <secret>         Shared secret for remote_signer_webhook
   --signer-proxy-url <url>          Hosted builder-sdk signer proxy URL

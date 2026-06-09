@@ -22,17 +22,23 @@ Auth0 provisioning defaults to the [Auth0 Deploy CLI](https://auth0.com/docs/dep
 
 1. **Auth0 tenant** (e.g. `your-org.us.auth0.com`)
 2. **Auth0 Management M2M app** — authorized for **Auth0 Management API** with scopes to manage clients, resource servers, and grants
-3. **OpenMeter** — [OpenMeter Cloud](https://openmeter.io) or self-hosted (full bootstrap only)
+3. **Konnect Metering & Billing** — Kong Konnect (powered by OpenMeter), or legacy self-hosted / [openmeter.cloud](https://openmeter.io)
 
-### OpenMeter API key
+### Konnect API credentials (default)
 
-1. Sign in at [openmeter.cloud](https://openmeter.cloud)
-2. **API** → **Create Token** (use **Read and Write** for bootstrap)
-3. Copy the token into `OPENMETER_API_KEY` in `.env`
+The platform runs on [Konnect Metering & Billing API v3](https://developer.konghq.com/api/konnect/metering-and-billing/v3/). Bootstrap uses a **Konnect Personal Access Token** (`kpat_…`), not an OpenMeter Cloud `om_…` token.
 
-Docs: [OpenMeter Cloud API keys](https://openmeter.io/docs/cloud/api/api-key)
+1. Sign in at [cloud.konghq.com](https://cloud.konghq.com)
+2. **Account** → [Personal access tokens](https://cloud.konghq.com/global/account/tokens/) → **Generate token** (Metering & Billing read/write)
+3. Set in `.env`:
+   - `OPENMETER_API_KEY=kpat_…`
+   - `OPENMETER_URL=https://us.api.konghq.com/v3/openmeter` (pick your org region: `eu`, `au`, `sg`, etc.)
 
-`OPENMETER_URL` defaults to `https://openmeter.cloud`. Override for self-hosted (e.g. Railway).
+The collector and event ingest expect the `/v3/openmeter` base (events POST to `…/openmeter/events`).
+
+### Legacy OpenMeter Cloud / self-hosted
+
+For `openmeter.cloud` or a self-hosted OpenMeter with `/api/v1` paths, set `OPENMETER_URL` accordingly and use an `om_…` API token. Bootstrap auto-detects Kong vs legacy from the URL hostname.
 
 ### Where meters are defined
 
@@ -48,7 +54,7 @@ There is no separate meter YAML in this repo yet. The **Kafka → OpenMeter inge
 ```bash
 npm install
 cp .env.example .env
-# edit .env — OPENMETER_URL, OPENMETER_API_KEY, Auth0 credentials
+# edit .env — OPENMETER_URL (Konnect region), OPENMETER_API_KEY (kpat_…), Auth0 credentials
 
 npm run bootstrap
 ```
@@ -129,8 +135,8 @@ pnpm --dir ../builder-sdk webhook:serve
 ```
 --skip-openmeter                 Auth0 only (default for npm run deploy)
 --skip-auth0                     OpenMeter only
---openmeter-url <url>            OpenMeter Cloud or self-hosted base URL
---openmeter-api-key <key>        Required for OpenMeter Cloud
+--openmeter-url <url>            Konnect metering base (default: us …/v3/openmeter)
+--openmeter-api-key <key>        Konnect PAT (kpat_…) or OpenMeter token (om_…)
 --signer-proxy-url <url>         Hosted builder-sdk signer proxy
 --sdk-config-output <path>       builder-sdk JSON (default: sdk-config.json)
 ```
