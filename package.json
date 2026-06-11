@@ -8,7 +8,12 @@
   "scripts": {
     "bootstrap": "tsx scripts/bootstrap.ts",
     "deploy": "tsx scripts/deploy.ts",
-    "export": "tsx scripts/export.ts"
+    "export": "tsx scripts/export.ts",
+    "stack:up": "bash scripts/stack-up.sh",
+    "stack:up:core": "bash scripts/stack-up.sh kafka remote-signer",
+    "stack:down": "bash scripts/stack-down.sh",
+    "stack:logs": "bash scripts/stack-logs.sh",
+    "stack:smoke": "bash scripts/stack-smoke.sh"
   },
   "engines": {
     "node": ">=18"

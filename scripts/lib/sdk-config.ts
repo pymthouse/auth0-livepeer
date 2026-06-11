@@ -16,6 +16,7 @@ export type LivepeerSdkConfig = {
   };
   signer: {
     proxyUrl: string;
+    publicUrl: string;
     audience: string;
   };
   openmeter?: {
@@ -41,6 +42,7 @@ export function buildSdkConfig(
     },
     signer: {
       proxyUrl: config.signerProxyUrl,
+      publicUrl: config.signerPublicUrl,
       audience: auth0.apiIdentifier,
     },
     remoteSigner: {

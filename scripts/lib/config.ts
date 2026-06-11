@@ -21,7 +21,11 @@ export type BootstrapConfig = {
   trialFeatureKey: string;
   webhookSecret: string;
   signerProxyUrl: string;
+  signerPublicUrl: string;
   remoteSignerWebhookUrl: string;
+  signerNetwork: string;
+  ethRpcUrl: string;
+  signerEthAddr: string;
   kafkaBrokers: string;
   kafkaGatewayTopic: string;
   ethUsdPrice: string;
@@ -108,11 +112,23 @@ export function parseConfig(argv: string[]): BootstrapConfig {
   const signerProxyUrl =
     argValue(argv, "--signer-proxy-url") ??
     env("SIGNER_PROXY_URL") ??
-    "http://127.0.0.1:3001/api/signer";
+    "https://your-platform.vercel.app/api/signer";
+  const signerPublicUrl =
+    argValue(argv, "--signer-public-url") ??
+    env("SIGNER_PUBLIC_URL") ??
+    "https://signer.your-domain.com";
   const remoteSignerWebhookUrl =
     argValue(argv, "--remote-signer-webhook-url") ??
     env("REMOTE_SIGNER_WEBHOOK_URL") ??
-    "http://127.0.0.1:8090/authorize";
+    "https://your-platform.vercel.app/webhooks/remote-signer";
+  const signerNetwork =
+    argValue(argv, "--signer-network") ??
+    env("SIGNER_NETWORK") ??
+    "arbitrum-one-mainnet";
+  const ethRpcUrl =
+    argValue(argv, "--eth-rpc-url") ?? env("ETH_RPC_URL") ?? "https://arb1.arbitrum.io/rpc";
+  const signerEthAddr =
+    argValue(argv, "--signer-eth-addr") ?? env("SIGNER_ETH_ADDR") ?? "";
 
   const skipAuth0 = hasFlag(argv, "--skip-auth0");
   const skipOpenMeter = hasFlag(argv, "--skip-openmeter");
@@ -151,7 +167,11 @@ export function parseConfig(argv: string[]): BootstrapConfig {
     trialFeatureKey,
     webhookSecret,
     signerProxyUrl,
+    signerPublicUrl,
     remoteSignerWebhookUrl,
+    signerNetwork,
+    ethRpcUrl,
+    signerEthAddr,
     kafkaBrokers,
     kafkaGatewayTopic,
     ethUsdPrice,
@@ -177,8 +197,12 @@ Options:
   --openmeter-api-key <key>         Konnect PAT (kpat_…) or OpenMeter token (om_…)
   --trial-feature-key <key>         Entitlement feature key (default: network_spend)
   --webhook-secret <secret>         Shared secret for remote_signer_webhook
-  --signer-proxy-url <url>          Hosted builder-sdk signer proxy URL
-  --remote-signer-webhook-url <url> Identity webhook URL (for sdk-config)
+  --signer-proxy-url <url>          Vercel signer proxy BFF URL
+  --signer-public-url <url>         Public HTTPS URL of VM remote signer
+  --remote-signer-webhook-url <url> Vercel identity webhook (go-livepeer calls this)
+  --signer-network <network>        go-livepeer -network (default: arbitrum-one-mainnet)
+  --eth-rpc-url <url>               Ethereum RPC for remote signer
+  --signer-eth-addr <addr>          Funded signer ETH address (operator)
   --sdk-config-output <path>        Write builder-sdk config JSON (default: sdk-config.json)
   --kafka-brokers <addrs>           Kafka bootstrap servers
   --kafka-gateway-topic <topic>       go-livepeer monitor topic

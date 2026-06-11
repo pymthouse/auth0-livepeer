@@ -47,7 +47,7 @@ Bootstrap creates meters via the OpenMeter API. Definitions live in code:
 - [`scripts/lib/meters.ts`](scripts/lib/meters.ts) — `network_fee_usd_micros`, `signed_ticket_count`
 - [`scripts/lib/openmeter.ts`](scripts/lib/openmeter.ts) — creates meters + `network_spend` feature
 
-There is no separate meter YAML in this repo yet. The **Kafka → OpenMeter ingest pipeline** (Wei → USD conversion) is a different concern — see [`pymthouse/config/openmeter-collector.yaml`](https://github.com/pymthouse/pymthouse/blob/main/config/openmeter-collector.yaml). That collector reads `ETH_USD_PRICE` (default `3500`); bootstrap copies it into `.env.livepeer` for convenience but you do not set it in `.env` here.
+Meter definitions live in [`scripts/lib/meters.ts`](scripts/lib/meters.ts). The **Kafka → Konnect ingest pipeline** runs on the tenant VM — see [`deploy/collector.yaml`](deploy/collector.yaml) and [`docs/clearinghouse-runtime.md`](docs/clearinghouse-runtime.md).
 
 ## Quick start (Auth0 + OpenMeter)
 
@@ -60,6 +60,26 @@ npm run bootstrap
 ```
 
 Writes `.env.livepeer` and `sdk-config.json`. CLI flags override env vars; run `npm run bootstrap -- --help` for the full list.
+
+## Runtime stack (VM)
+
+After bootstrap, deploy the clearinghouse runtime on a VM:
+
+```bash
+# Set REMOTE_SIGNER_WEBHOOK_URL + WEBHOOK_SECRET in .env.livepeer first
+docker compose -f deploy/docker-compose.yml --env-file .env.livepeer up -d --build
+
+# kafka + signer only:
+docker compose -f deploy/docker-compose.yml --env-file .env.livepeer up -d --build kafka remote-signer
+
+npm run stack:smoke
+```
+
+Three containers: **Kafka** (Redpanda), **go-livepeer remote signer**, **OpenMeter collector** → Konnect.
+
+Identity webhook ships on **Vercel** with the platform app (builder-sdk), not in this compose stack.
+
+Full operator guide: [`docs/clearinghouse-runtime.md`](docs/clearinghouse-runtime.md).
 
 ## Auth0 only
 
@@ -101,34 +121,24 @@ Written when Auth0 is provisioned (bootstrap or deploy):
 
 ```json
 {
-  "auth0": {
-    "domain": "your-org.us.auth0.com",
-    "clientId": "<public-client-id>",
-    "audience": "livepeer"
-  },
+  "auth0": { "domain": "...", "clientId": "...", "audience": "livepeer" },
   "signer": {
-    "proxyUrl": "https://api.yourplatform.com/api/signer"
+    "proxyUrl": "https://your-platform.vercel.app/api/signer",
+    "publicUrl": "https://signer.your-domain.com"
+  },
+  "remoteSigner": {
+    "webhookUrl": "https://your-platform.vercel.app/webhooks/remote-signer"
   }
 }
 ```
 
-Map `signer.proxyUrl` to your hosted builder-sdk signer BFF; user Auth0 JWTs are forwarded to the remote signer.
+- `signer.proxyUrl` — Vercel BFF; forwards Auth0 JWTs to the VM signer
+- `signer.publicUrl` — public HTTPS URL of the VM remote signer
+- `remoteSigner.webhookUrl` — Vercel route; go-livepeer calls this on authorize
 
 ## Wiring to go-livepeer
 
-See [go-livepeer/doc/remote-signer.md](https://github.com/livepeer/go-livepeer/blob/master/doc/remote-signer.md).
-
-```bash
-export $(grep -v '^#' .env.livepeer | xargs)
-
-pnpm --dir ../builder-sdk webhook:serve
-
-./livepeer \
-  -remoteSigner \
-  -remoteSignerWebhookUrl http://127.0.0.1:8090/authorize \
-  -remoteSignerWebhookHeaders "Authorization:Bearer ${WEBHOOK_SECRET}" \
-  ...
-```
+See [go-livepeer/doc/remote-signer.md](https://github.com/livepeer/go-livepeer/blob/master/doc/remote-signer.md) and [`docs/clearinghouse-runtime.md`](docs/clearinghouse-runtime.md).
 
 ## Common options
 
@@ -137,6 +147,13 @@ pnpm --dir ../builder-sdk webhook:serve
 --skip-auth0                     OpenMeter only
 --openmeter-url <url>            Konnect metering base (default: us …/v3/openmeter)
 --openmeter-api-key <key>        Konnect PAT (kpat_…) or OpenMeter token (om_…)
---signer-proxy-url <url>         Hosted builder-sdk signer proxy
+--signer-proxy-url <url>         Vercel signer proxy BFF
+--signer-public-url <url>        VM signer public HTTPS URL
+--remote-signer-webhook-url <url> Vercel identity webhook URL
 --sdk-config-output <path>       builder-sdk JSON (default: sdk-config.json)
+
+docker compose -f deploy/... up  Start VM runtime (see deploy/docker-compose.yml)
+npm run stack:up                 Same (npm wrapper)
+npm run stack:up:core            Kafka + signer only
+npm run stack:smoke              Infra smoke checks
 ```
