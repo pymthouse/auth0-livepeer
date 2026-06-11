@@ -2,7 +2,6 @@ import { writeFile } from "node:fs/promises";
 import { provisionAuth0Management } from "./auth0-management.js";
 import { buildEnvFile } from "./build-env.js";
 import type { BootstrapConfig } from "./config.js";
-import { bootstrapOpenMeter } from "./openmeter.js";
 import { provisionAuth0Deploy, type Auth0ProvisionResult } from "./provision.js";
 import { buildSdkConfig } from "./sdk-config.js";
 
@@ -37,6 +36,7 @@ export async function runBootstrap(config: BootstrapConfig): Promise<void> {
   }
 
   if (!config.skipOpenMeter) {
+    const { bootstrapOpenMeter } = await import("./openmeter.js");
     await bootstrapOpenMeter({
       baseUrl: config.openmeterUrl,
       apiKey: config.openmeterApiKey,

@@ -42,12 +42,13 @@ For `openmeter.cloud` or a self-hosted OpenMeter with `/api/v1` paths, set `OPEN
 
 ### Where meters are defined
 
-Bootstrap creates meters via the OpenMeter API. Definitions live in code:
+Bootstrap creates meters via the OpenMeter API. Definitions are configured via JSON:
 
-- [`scripts/lib/meters.ts`](scripts/lib/meters.ts) — `network_fee_usd_micros`, `signed_ticket_count`
+- [`config/meters.json`](config/meters.json) — meter slugs, dimensions, and descriptions used for both OpenMeter + Konnect
+- [`scripts/lib/meters.ts`](scripts/lib/meters.ts) — typed loader/mapper for meter config
 - [`scripts/lib/openmeter.ts`](scripts/lib/openmeter.ts) — creates meters + `network_spend` feature
 
-Meter definitions live in [`scripts/lib/meters.ts`](scripts/lib/meters.ts). The **Kafka → Konnect ingest pipeline** runs on the tenant VM — see [`deploy/collector.yaml`](deploy/collector.yaml) and [`docs/clearinghouse-runtime.md`](docs/clearinghouse-runtime.md).
+Meter definitions are editable in [`config/meters.json`](config/meters.json). To use a different file, pass `--meters-config <path>` (or set `METERS_CONFIG_PATH`). The **Kafka → Konnect ingest pipeline** runs on the tenant VM — see [`deploy/collector.yaml`](deploy/collector.yaml) and [`docs/clearinghouse-runtime.md`](docs/clearinghouse-runtime.md).
 
 ## Quick start (Auth0 + OpenMeter)
 
@@ -147,6 +148,7 @@ See [go-livepeer/doc/remote-signer.md](https://github.com/livepeer/go-livepeer/b
 --skip-auth0                     OpenMeter only
 --openmeter-url <url>            Konnect metering base (default: us …/v3/openmeter)
 --openmeter-api-key <key>        Konnect PAT (kpat_…) or OpenMeter token (om_…)
+--meters-config <path>           Meter definition config JSON (default: ./config/meters.json)
 --signer-proxy-url <url>         Vercel signer proxy BFF
 --signer-public-url <url>        VM signer public HTTPS URL
 --remote-signer-webhook-url <url> Vercel identity webhook URL

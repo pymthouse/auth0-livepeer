@@ -53,6 +53,12 @@ function hasFlag(argv: string[], flag: string): boolean {
 }
 
 export function parseConfig(argv: string[]): BootstrapConfig {
+  const metersConfigPath =
+    argValue(argv, "--meters-config") ?? env("METERS_CONFIG_PATH");
+  if (metersConfigPath) {
+    process.env.METERS_CONFIG_PATH = metersConfigPath;
+  }
+
   const auth0Domain =
     argValue(argv, "--auth0-domain") ?? env("AUTH0_DOMAIN") ?? "";
   const auth0MgmtClientId =
@@ -70,13 +76,13 @@ export function parseConfig(argv: string[]): BootstrapConfig {
     argValue(argv, "--openmeter-url") ??
     env("OPENMETER_URL") ??
     DEFAULT_KONNECT_METERING_URL;
-  const openmeterUrl = isKonnectMeteringUrl(openmeterUrlRaw, openmeterApiKey)
-    ? normalizeKonnectMeteringUrl(
-        /konghq\.com/i.test(openmeterUrlRaw)
-          ? openmeterUrlRaw
-          : DEFAULT_KONNECT_METERING_URL,
-      )
-    : openmeterUrlRaw.replace(/\/$/, "");
+  let openmeterUrl = openmeterUrlRaw.replace(/\/$/, "");
+  if (isKonnectMeteringUrl(openmeterUrlRaw, openmeterApiKey)) {
+    const konnectBase = /konghq\.com/i.test(openmeterUrlRaw)
+      ? openmeterUrlRaw
+      : DEFAULT_KONNECT_METERING_URL;
+    openmeterUrl = normalizeKonnectMeteringUrl(konnectBase);
+  }
   const trialFeatureKey =
     argValue(argv, "--trial-feature-key") ??
     env("OPENMETER_TRIAL_FEATURE_KEY") ??
@@ -104,7 +110,7 @@ export function parseConfig(argv: string[]): BootstrapConfig {
   if (auth0ModeRaw !== "deploy" && auth0ModeRaw !== "management") {
     throw new Error('--auth0-mode must be "deploy" or "management"');
   }
-  const auth0Mode = auth0ModeRaw as Auth0ProvisionMode;
+  const auth0Mode: Auth0ProvisionMode = auth0ModeRaw;
   const auth0TenantYaml =
     argValue(argv, "--auth0-tenant-yaml") ??
     env("AUTH0_TENANT_YAML") ??
@@ -195,6 +201,7 @@ Options:
   --api-audience <aud>              API identifier (default: livepeer)
   --openmeter-url <url>             Konnect metering base (default: us.api.konghq.com/v3/openmeter)
   --openmeter-api-key <key>         Konnect PAT (kpat_…) or OpenMeter token (om_…)
+  --meters-config <path>            Meter definition config JSON (default: ./config/meters.json)
   --trial-feature-key <key>         Entitlement feature key (default: network_spend)
   --webhook-secret <secret>         Shared secret for remote_signer_webhook
   --signer-proxy-url <url>          Vercel signer proxy BFF URL
