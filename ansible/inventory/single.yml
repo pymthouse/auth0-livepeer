@@ -1,0 +1,5 @@
+all:
+  hosts:
+    clearinghouse:
+      ansible_host: "{{ lookup('env', 'CLEARINGHOUSE_HOST') | default('your-vm.example.com', true) }}"
+      ansible_user: "{{ lookup('env', 'CLEARINGHOUSE_USER') | default('ubuntu', true) }}"

@@ -1,0 +1,76 @@
+# Clearinghouse VM runtime: Kafka + go-livepeer remote signer + OpenMeter collector.
+# Prerequisites: npm run bootstrap → .env.livepeer (REMOTE_SIGNER_WEBHOOK_URL + WEBHOOK_SECRET).
+#
+# Full stack:
+#   docker compose -f deploy/docker-compose.yml --env-file .env.livepeer up -d --build
+#
+# Kafka + signer only (local dev):
+#   docker compose -f deploy/docker-compose.yml --env-file .env.livepeer up -d --build kafka remote-signer
+#
+# npm shortcuts: stack:up | stack:up:core
+
+services:
+  kafka:
+    image: docker.redpanda.com/redpandadata/redpanda:v24.2.4
+    restart: unless-stopped
+    command:
+      - redpanda
+      - start
+      - --kafka-addr internal://0.0.0.0:9092
+      - --advertise-kafka-addr internal://kafka:9092
+      - --mode dev-container
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy'"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  remote-signer:
+    build:
+      context: ./signer
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "${SIGNER_HOST_PORT:-8081}:8081"
+    volumes:
+      - signer_data:/data
+    environment:
+      SIGNER_NETWORK: ${SIGNER_NETWORK:-arbitrum-one-mainnet}
+      SIGNER_PORT: "8081"
+      ETH_RPC_URL: ${ETH_RPC_URL:-https://arb1.arbitrum.io/rpc}
+      SIGNER_ETH_ADDR: ${SIGNER_ETH_ADDR:-}
+      SIGNER_REMOTE_DISCOVERY: ${SIGNER_REMOTE_DISCOVERY:-0}
+      ORCH_WEBHOOK_URL: ${ORCH_WEBHOOK_URL:-}
+      LIVE_AI_CAP_REPORT_INTERVAL: ${LIVE_AI_CAP_REPORT_INTERVAL:-}
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
+      KAFKA_GATEWAY_TOPIC: ${KAFKA_GATEWAY_TOPIC:-livepeer-gateway-events}
+      REMOTE_SIGNER_WEBHOOK_URL: ${REMOTE_SIGNER_WEBHOOK_URL}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET}
+
+  openmeter-collector:
+    image: ghcr.io/openmeterio/benthos-collector:latest
+    restart: unless-stopped
+    depends_on:
+      kafka:
+        condition: service_healthy
+    volumes:
+      - ./collector.yaml:/config.yaml:ro
+    command: ["-c", "/config.yaml"]
+    environment:
+      KAFKA_BROKERS: ${KAFKA_BROKERS:-kafka:9092}
+      KAFKA_GATEWAY_TOPIC: ${KAFKA_GATEWAY_TOPIC:-livepeer-gateway-events}
+      OPENMETER_URL: ${OPENMETER_URL}
+      OPENMETER_API_KEY: ${OPENMETER_API_KEY}
+      ETH_USD_PRICE: ${ETH_USD_PRICE:-3500}
+
+volumes:
+  signer_data:

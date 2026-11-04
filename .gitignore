@@ -1,6 +1,7 @@
 # Secrets and local env
 .env*
 !.env.example
+sdk-config.json
 
 node_modules/
 export/
